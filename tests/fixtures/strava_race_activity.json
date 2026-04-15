@@ -1,0 +1,24 @@
+{
+  "id": 14738291734,
+  "name": "Volta ao Algarve - Etapa 2",
+  "type": "Ride",
+  "sport_type": "Ride",
+  "workout_type": 11,
+  "start_date_local": "2026-02-19T13:30:00Z",
+  "distance": 158420.0,
+  "moving_time": 12640,
+  "elapsed_time": 12780,
+  "total_elevation_gain": 1834.0,
+  "average_speed": 12.5,
+  "average_watts": 268.0,
+  "weighted_average_watts": 305.0,
+  "average_heartrate": 162.0,
+  "max_heartrate": 188.0,
+  "kilojoules": 3387.5,
+  "description": "Etapa difícil, ataquei a 30km do final, fechei top 15. Pernas vazias mas feliz.",
+  "map": {
+    "id": "a14738291734",
+    "summary_polyline": "}~p_F~ngzAhIb@~CdC|EfDhEzC~D|D~CrEvBfFlBlGfBzG`B|G|A`Hl@vGS~G_AhGoBjFsCpEqDdEqEfDeF~CoFhCqGdCsHvBuI~AwJxAwK~@yLpAyM~AyN`CyOlD",
+    "polyline": null
+  }
+}
