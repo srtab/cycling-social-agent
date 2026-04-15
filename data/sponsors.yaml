@@ -1,0 +1,9 @@
+- name: BrandX
+  handle_facebook: "@brandx"
+  handle_instagram: "@brandx"
+  hashtag: "#brandx"
+
+- name: BrandY
+  handle_facebook: "@brandy"
+  handle_instagram: "@brandy"
+  hashtag: "#brandy"
