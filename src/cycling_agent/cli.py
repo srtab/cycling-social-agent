@@ -82,6 +82,23 @@ def serve_cmd(dry_run: bool | None) -> None:
     asyncio.run(serve_async(settings))
 
 
+@cli.command("reflect")
+def reflect_cmd() -> None:
+    """Generate a style-guide diff proposal from recent approval feedback."""
+    import datetime as _dt
+
+    from langchain_anthropic import ChatAnthropic
+
+    from cycling_agent.agent.reflect import run_reflect
+
+    settings = load_settings()
+    repo = _build_repo()
+    llm = ChatAnthropic(model=settings.reflector_model, max_tokens=2048)
+    out_dir = Path("data/reflect-proposals")
+    path = run_reflect(repo=repo, llm=llm, output_dir=out_dir, now=_dt.datetime.now(_dt.UTC))
+    click.echo(f"wrote proposal: {path}")
+
+
 def main() -> None:
     cli()
 
