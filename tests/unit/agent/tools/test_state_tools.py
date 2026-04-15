@@ -50,3 +50,24 @@ def test_log_feedback_writes_event(repo: Repository) -> None:
     log_fb.invoke({"draft_id": did, "kind": "agent_note", "payload": '{"observation":"caption was rewritten 3 times"}'})
     events = repo.list_approval_events_for_draft(did)
     assert len(events) == 1
+
+
+def test_list_drafts_for_activity_reports_none(repo: Repository) -> None:
+    tools = build_state_tools(repo=repo)
+    lst = next(t for t in tools if t.name == "list_drafts_for_activity")
+    assert lst.invoke({"activity_id": 1}) == "No drafts."
+
+
+def test_list_drafts_for_activity_reports_existing(repo: Repository) -> None:
+    d1 = repo.create_draft(activity_id=1, platform=Platform.FACEBOOK, language=Language.PT, caption="x")
+    repo.set_draft_status(d1, DraftStatus.AWAITING_APPROVAL, telegram_message_id=1)
+    repo.create_draft(activity_id=1, platform=Platform.INSTAGRAM, language=Language.PT, caption="y")
+
+    tools = build_state_tools(repo=repo)
+    lst = next(t for t in tools if t.name == "list_drafts_for_activity")
+    result = lst.invoke({"activity_id": 1})
+    assert "platform=facebook" in result
+    assert "language=pt" in result
+    assert "status=awaiting_approval" in result
+    assert "platform=instagram" in result
+    assert "status=drafted" in result

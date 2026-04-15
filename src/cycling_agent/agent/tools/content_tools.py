@@ -31,12 +31,12 @@ def build_content_tools(*, repo: Repository) -> list[BaseTool]:
     def read_style_examples(language: str) -> str:
         """Return the rider's past posts to use as voice/few-shot examples.
 
-        ``language`` must be 'pt' or 'en'.
+        ``language`` must be 'pt'.
         """
         try:
             lang = Language(language)
         except ValueError as e:
-            raise ValueError(f"language must be 'pt' or 'en', got {language!r}") from e
+            raise ValueError(f"language must be 'pt', got {language!r}") from e
         examples = repo.list_style_examples(lang)
         if not examples:
             return f"No style examples for {language}."

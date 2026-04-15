@@ -6,6 +6,7 @@ Here we only assert the orchestrator is built with the expected tools and sub-ag
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -22,6 +23,9 @@ def deps(tmp_path: Path) -> OrchestratorDeps:
     engine = build_engine(":memory:")
     init_schema(engine)
     repo = Repository(build_session_factory(engine))
+    # These tests don't invoke tools, so a non-running loop is fine here —
+    # it's only used by the approval-tool closure that ``_collect_tools`` bakes.
+    loop = asyncio.new_event_loop()
     return OrchestratorDeps(
         repo=repo,
         strava_client=MagicMock(),
@@ -33,6 +37,8 @@ def deps(tmp_path: Path) -> OrchestratorDeps:
         publish_timezone="Europe/Lisbon",
         orchestrator_model="claude-haiku-4-5-20251001",
         drafter_model="claude-sonnet-4-6",
+        reflector_model="claude-sonnet-4-6",
+        main_loop=loop,
     )
 
 
@@ -57,6 +63,7 @@ def test_collect_tools_returns_expected_names(deps: OrchestratorDeps) -> None:
         "publish_to_instagram",
         "mark_processed",
         "log_feedback",
+        "list_drafts_for_activity",
     }.issubset(names)
 
 
@@ -72,7 +79,33 @@ def test_build_orchestrator_returns_agent(deps: OrchestratorDeps, monkeypatch: p
 
     assert agent is not None
     assert "tools" in captured
-    assert "instructions" in captured
+    assert "system_prompt" in captured
     assert "subagents" in captured
+    # Default enabled_platforms includes both — the rendered prompt must
+    # reflect that so the orchestrator generates drafts for each.
+    assert "[(facebook, pt), (instagram, pt)]" in captured["system_prompt"]
     sub_names = {s["name"] for s in captured["subagents"]}
     assert {"drafter", "reflector"}.issubset(sub_names)
+    # Each subagent must bind its own model — otherwise deepagents silently
+    # falls back to the orchestrator's model.
+    by_name = {s["name"]: s for s in captured["subagents"]}
+    assert by_name["drafter"]["model"].model == deps.drafter_model
+    assert by_name["reflector"]["model"].model == deps.reflector_model
+
+
+def test_build_orchestrator_prompt_excludes_disabled_platform(
+    deps: OrchestratorDeps, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: dict = {}
+
+    def fake_create(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="fake-agent")
+
+    monkeypatch.setattr("cycling_agent.agent.orchestrator.create_deep_agent", fake_create)
+    deps.enabled_platforms = {Platform.FACEBOOK}
+    build_orchestrator(deps)
+
+    prompt = captured["system_prompt"]
+    assert "[(facebook, pt)]" in prompt
+    assert "instagram" not in prompt

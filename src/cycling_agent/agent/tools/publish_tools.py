@@ -50,6 +50,11 @@ def build_publish_tools(
             return f"REJECTED: draft {draft_id} approved but not marked post_now; use schedule_publish"
 
         platform = Platform(d.platform)
+        if platform not in publishers:
+            # Platform was disabled via ENABLED_PLATFORMS after this draft was
+            # created. Leave the draft in place so it can be published if the
+            # platform is re-enabled later.
+            return f"SKIPPED: draft {draft_id} platform {platform} is disabled"
         publisher = publishers[platform]
         request = PublishRequest(
             caption=(d.caption + ("\n" + d.hashtags if d.hashtags else "")).strip(),

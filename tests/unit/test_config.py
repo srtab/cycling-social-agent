@@ -29,5 +29,5 @@ def test_settings_publish_time_validates_format(monkeypatch: pytest.MonkeyPatch)
 
 def test_settings_default_models() -> None:
     settings = Settings()
-    assert "haiku" in settings.orchestrator_model.lower()
+    assert "sonnet" in settings.orchestrator_model.lower()
     assert "sonnet" in settings.drafter_model.lower()

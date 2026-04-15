@@ -13,10 +13,29 @@ uv sync
 ## 2. Strava
 
 1. Create an API application at <https://www.strava.com/settings/api>. Note your `Client ID` and `Client Secret`.
-2. Use any OAuth flow (e.g., the [strava-tokens helper](https://developers.strava.com/docs/getting-started/)) to exchange your authorisation code for a refresh token.
-3. Confirm with `curl -X POST https://www.strava.com/api/v3/oauth/token -F client_id=... -F client_secret=... -F grant_type=refresh_token -F refresh_token=...` that you can refresh.
+2. Authorise with scope `read,activity:read_all` — the agent reads the activity's private `description` as the "feeling" note, so `activity:read` alone is **not enough**. Open this URL in a browser (replace `CLIENT_ID`):
+
+   ```
+   https://www.strava.com/oauth/authorize?client_id=CLIENT_ID&response_type=code&redirect_uri=http://localhost/exchange_token&approval_prompt=force&scope=read,activity:read_all
+   ```
+
+   `approval_prompt=force` is important — without it, Strava silently re-uses any prior consent and you'll get a token with the old scope. After authorising, Strava redirects to `http://localhost/exchange_token?code=<CODE>&scope=read,activity:read_all`. Verify `activity:read_all` is in the returned `scope` before proceeding.
+
+3. Exchange the code for a refresh token:
+
+   ```bash
+   curl -X POST https://www.strava.com/api/v3/oauth/token \
+     -F client_id=<CLIENT_ID> \
+     -F client_secret=<CLIENT_SECRET> \
+     -F code=<CODE> \
+     -F grant_type=authorization_code
+   ```
+
+4. Confirm you can refresh: `curl -X POST https://www.strava.com/api/v3/oauth/token -F client_id=... -F client_secret=... -F grant_type=refresh_token -F refresh_token=...`.
 
 Put `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`, and `STRAVA_ATHLETE_ID` in `.env`.
+
+> If the agent logs `Authorization Error ... 'field': 'activity:read_permission', 'code': 'missing'`, your refresh token was minted with insufficient scope. Redo step 2 with `approval_prompt=force`.
 
 ## 3. Meta (Facebook + Instagram)
 
@@ -40,6 +59,21 @@ Put `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`.
 
 Get an API key from <https://console.anthropic.com/>. Put `ANTHROPIC_API_KEY` in `.env`.
 
+## 5a. LangSmith (optional observability)
+
+LangChain, LangGraph, and the `deepagents` orchestrator all auto-trace to LangSmith when these vars are set. No code change required — `load_dotenv()` at startup makes them visible to the langsmith SDK.
+
+1. Sign in at <https://smith.langchain.com/> and create an API key.
+2. Set in `.env`:
+
+   ```
+   LANGSMITH_TRACING=true
+   LANGSMITH_PROJECT=cycling-social-agent
+   LANGSMITH_API_KEY=<your key>
+   ```
+
+Traces appear under the `cycling-social-agent` project. To disable, set `LANGSMITH_TRACING=false` (the SDK becomes a no-op — no network calls).
+
 ## 6. Seed your sponsors and style examples
 
 ```bash
@@ -47,14 +81,11 @@ cp data/sponsors.yaml.example data/sponsors.yaml
 $EDITOR data/sponsors.yaml
 
 cp data/style_examples_pt.md.example data/style_examples_pt.md
-cp data/style_examples_en.md.example data/style_examples_en.md
 $EDITOR data/style_examples_pt.md
-$EDITOR data/style_examples_en.md
 
 uv run cycling-agent init-db
 uv run cycling-agent seed-sponsors
 uv run cycling-agent seed-style --lang pt --path data/style_examples_pt.md
-uv run cycling-agent seed-style --lang en --path data/style_examples_en.md
 ```
 
 ## 7. First run (dry-run)

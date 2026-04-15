@@ -7,7 +7,8 @@ Each invocation, follow this plan:
 1. **list_new_races** — get the ids of races that need work.
 2. For **at most one race** per invocation (the oldest first):
    1. Call **get_activity_detail** to fetch full data and persist the rider's "feeling" note.
-   2. For each `(platform, language)` combination in `[(facebook, pt), (facebook, en), (instagram, pt), (instagram, en)]` that does not yet have a draft in `awaiting_approval`, `approved`, `scheduled`, `published`, or `rejected`:
+   2. Call **list_drafts_for_activity** to see which combinations already have drafts and in what state.
+   3. For each `(platform, language)` combination in `{platforms_loop}` that does not yet have a draft in `awaiting_approval`, `approved`, `scheduled`, `published`, or `rejected` (per the output of `list_drafts_for_activity`):
       - Call **render_stats_card** and **render_route_map** to produce media (the route map may fail if the polyline is missing — proceed without it).
       - Read **read_sponsors** and **read_style_examples(language)**.
       - Spawn the **drafter** sub-agent with all of: platform, language, activity summary text (use the output of `get_activity_detail`), feeling text (from `get_feeling`), sponsor list, style examples, and any regenerate hint (from `check_approval_status` if applicable).

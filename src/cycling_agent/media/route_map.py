@@ -14,6 +14,10 @@ from typing import Any
 import polyline as polyline_lib
 import staticmaps
 
+from cycling_agent.media._staticmaps_compat import apply as _apply_staticmaps_compat
+
+_apply_staticmaps_compat()
+
 _DEFAULT_SIZE = (1080, 1080)
 
 

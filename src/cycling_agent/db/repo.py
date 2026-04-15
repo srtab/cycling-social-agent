@@ -199,6 +199,11 @@ class Repository:
             stmt = select(Draft).where(Draft.status.in_(list(statuses)))
             return list(s.execute(stmt).scalars().all())
 
+    def list_drafts_for_activity(self, activity_id: int) -> list[Draft]:
+        with self._session_factory() as s:
+            stmt = select(Draft).where(Draft.activity_id == activity_id).order_by(Draft.id)
+            return list(s.execute(stmt).scalars().all())
+
     # --- posts ---------------------------------------------------------------
 
     def record_post(self, *, draft_id: int, platform: Platform, external_post_id: str) -> None:

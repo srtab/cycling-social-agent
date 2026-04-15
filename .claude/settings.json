@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/bin/pip show *)",
+      "Bash(.venv/bin/pip index *)",
+      "Bash(uv run *)",
+      "Bash(.venv/bin/python -c \"import telegram; print\\(telegram.__version__\\); import httpx; print\\(httpx.__version__\\); import anyio; print\\(anyio.__version__\\); import sys; print\\(sys.version\\)\")",
+      "Bash(.venv/bin/python -c \"import telegram; print\\('telegram:', telegram.__version__\\); import httpx; print\\('httpx:', httpx.__version__\\); from importlib.metadata import version; print\\('anyio:', version\\('anyio'\\)\\); print\\('httpcore:', version\\('httpcore'\\)\\)\")"
+    ]
+  }
+}
