@@ -34,7 +34,6 @@ class Platform(enum.StrEnum):
 
 class Language(enum.StrEnum):
     PT = "pt"
-    EN = "en"
 
 
 class ActivityStatus(enum.StrEnum):

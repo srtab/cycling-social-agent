@@ -131,6 +131,37 @@ def test_publish_due_drafts_publishes_post_now(repo: Repository, tmp_path: Path)
     ig.publish.assert_called_once()
 
 
+def test_publish_due_drafts_skips_disabled_platform(repo: Repository, tmp_path: Path) -> None:
+    img = tmp_path / "card.png"
+    img.write_bytes(b"PNG")
+    did = repo.create_draft(
+        activity_id=1,
+        platform=Platform.INSTAGRAM,
+        language=Language.PT,
+        caption="x",
+        media_paths=str(img),
+    )
+    repo.set_approved(did, post_now=True)
+
+    # Instagram is no longer in the publishers dict — simulates a draft
+    # left over after ENABLED_PLATFORMS was narrowed to facebook only.
+    publishers = {Platform.FACEBOOK: MagicMock()}
+    tools = build_publish_tools(
+        repo=repo,
+        publishers=publishers,
+        publish_time_local="19:00",
+        publish_timezone="Europe/Lisbon",
+    )
+    publish_due = next(t for t in tools if t.name == "publish_due_drafts")
+    result = publish_due.invoke({})
+    assert "SKIPPED" in result
+    assert "disabled" in result
+    # Draft stays approved so it can publish when the platform is re-enabled.
+    d = repo.get_draft(did)
+    assert d is not None
+    assert d.status == DraftStatus.APPROVED
+
+
 def test_publish_to_facebook_refuses_unless_approved(repo: Repository) -> None:
     did = repo.create_draft(
         activity_id=1,

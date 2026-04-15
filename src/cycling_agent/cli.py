@@ -59,7 +59,7 @@ def seed_sponsors_cmd(path: Path) -> None:
 
 
 @cli.command("seed-style")
-@click.option("--lang", type=click.Choice(["pt", "en"]), required=True)
+@click.option("--lang", type=click.Choice(["pt"]), required=True)
 @click.option("--path", type=click.Path(exists=True, dir_okay=False, path_type=Path), required=True)
 def seed_style_cmd(lang: str, path: Path) -> None:
     """Reload style examples from a markdown file."""

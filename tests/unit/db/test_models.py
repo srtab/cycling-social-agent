@@ -50,7 +50,7 @@ def test_draft_unique_per_activity_platform_language() -> None:
 def test_draft_default_state_is_pending() -> None:
     s = _session()
     s.add(Activity(id=1, started_at=dt.datetime(2026, 4, 1), name="r", workout_type=11))
-    d = Draft(activity_id=1, platform=Platform.INSTAGRAM, language=Language.EN, caption="x")
+    d = Draft(activity_id=1, platform=Platform.INSTAGRAM, language=Language.PT, caption="x")
     s.add(d)
     s.commit()
     assert d.status == DraftStatus.PENDING
@@ -78,10 +78,10 @@ def test_sponsor_basic_create() -> None:
     assert sponsor.id is not None
 
 
-def test_style_example_per_language() -> None:
+def test_style_examples_persist() -> None:
     s = _session()
     s.add(StyleExample(language=Language.PT, text="Dia duro mas feliz."))
-    s.add(StyleExample(language=Language.EN, text="Hard day, happy ending."))
+    s.add(StyleExample(language=Language.PT, text="Chegada em grupo, boa sensação."))
     s.commit()
     assert s.query(StyleExample).count() == 2
 

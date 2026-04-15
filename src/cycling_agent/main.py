@@ -46,12 +46,20 @@ def build_strava(settings: Settings) -> StravaClient:
 
 
 def build_publishers(settings: Settings) -> dict[Platform, Publisher]:
-    """Build platform publishers. Real API objects are constructed lazily."""
+    """Build platform publishers. Real API objects are constructed lazily.
+
+    Only platforms in ``settings.enabled_platform_set`` are built; others are
+    omitted from the returned dict so the orchestrator and the publish loop
+    never touch them.
+    """
+    enabled = settings.enabled_platform_set
+
     if settings.dry_run:
-        return {
+        all_dry: dict[Platform, Publisher] = {
             Platform.FACEBOOK: FacebookPublisher(page=None, ig_business_id=None, dry_run=True),
             Platform.INSTAGRAM: InstagramPublisher(page=None, ig=None, dry_run=True),
         }
+        return {p: pub for p, pub in all_dry.items() if p in enabled}
 
     from facebook_business.adobjects.iguser import IGUser
     from facebook_business.adobjects.page import Page
@@ -62,13 +70,21 @@ def build_publishers(settings: Settings) -> dict[Platform, Publisher]:
         app_secret=settings.meta_app_secret,
         access_token=settings.meta_page_access_token,
     )
-    page = Page(settings.meta_page_id)
-    ig = IGUser(settings.meta_ig_business_id)
 
-    return {
-        Platform.FACEBOOK: FacebookPublisher(page=page, ig_business_id=settings.meta_ig_business_id, dry_run=False),
-        Platform.INSTAGRAM: InstagramPublisher(page=page, ig=ig, dry_run=False),
-    }
+    publishers: dict[Platform, Publisher] = {}
+    if Platform.FACEBOOK in enabled:
+        publishers[Platform.FACEBOOK] = FacebookPublisher(
+            page=Page(settings.meta_page_id),
+            ig_business_id=settings.meta_ig_business_id,
+            dry_run=False,
+        )
+    if Platform.INSTAGRAM in enabled:
+        publishers[Platform.INSTAGRAM] = InstagramPublisher(
+            page=Page(settings.meta_page_id),
+            ig=IGUser(settings.meta_ig_business_id),
+            dry_run=False,
+        )
+    return publishers
 
 
 async def serve_async(settings: Settings) -> None:
@@ -85,6 +101,11 @@ async def serve_async(settings: Settings) -> None:
     bot = ApprovalBot(repo=repo, chat_id=chat_id)
     bot.register_handlers(application)
 
+    # Capture the running loop before building the orchestrator — the approval
+    # tools bake it into a closure at build time so they can submit coroutines
+    # back to it from the agent runner's worker thread.
+    loop = asyncio.get_running_loop()
+
     deps = OrchestratorDeps(
         repo=repo,
         strava_client=strava,
@@ -96,6 +117,9 @@ async def serve_async(settings: Settings) -> None:
         publish_timezone=settings.publish_timezone,
         orchestrator_model=settings.orchestrator_model,
         drafter_model=settings.drafter_model,
+        reflector_model=settings.reflector_model,
+        main_loop=loop,
+        enabled_platforms=settings.enabled_platform_set,
     )
     orchestrator = build_orchestrator(deps)
     runner = AgentRunner(
@@ -106,7 +130,6 @@ async def serve_async(settings: Settings) -> None:
     )
 
     stop_event = asyncio.Event()
-    loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop_event.set)
 

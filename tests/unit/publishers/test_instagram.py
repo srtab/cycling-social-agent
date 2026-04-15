@@ -17,12 +17,21 @@ def _request(tmp_path: Path) -> PublishRequest:
     return PublishRequest(caption="Hello", media_paths=[img])
 
 
+def _fake_page(fb_response: dict, page_id: str = "PAGE_ID") -> MagicMock:
+    """A mock whose surface matches ``Page`` where the publisher touches it.
+
+    The publisher calls ``page.get_api().call(...).json()`` and reads ``page["id"]``.
+    """
+    page = MagicMock()
+    page.__getitem__.side_effect = lambda key: page_id if key == "id" else None
+    page.get_api.return_value.call.return_value.json.return_value = fb_response
+    return page
+
+
 def test_publish_executes_three_step_flow(tmp_path: Path) -> None:
-    fake_page = MagicMock()
-    fake_page.create_photo.return_value = {
-        "id": "5555",
-        "images": [{"source": "https://scontent.fb.example/image.jpg"}],
-    }
+    fake_page = _fake_page(
+        {"id": "5555", "images": [{"source": "https://scontent.fb.example/image.jpg"}]}
+    )
     fake_ig = MagicMock()
     fake_ig.create_media.return_value = {"id": "container-1"}
     fake_ig.publish_media.return_value = {"id": "ig-post-1"}
@@ -31,9 +40,12 @@ def test_publish_executes_three_step_flow(tmp_path: Path) -> None:
     post_id = publisher.publish(_request(tmp_path))
     assert post_id == "ig-post-1"
 
-    fake_page.create_photo.assert_called_once()
-    fb_kwargs = fake_page.create_photo.call_args.kwargs
+    fake_page.get_api.return_value.call.assert_called_once()
+    fb_kwargs = fake_page.get_api.return_value.call.call_args.kwargs
+    assert fb_kwargs["method"] == "POST"
+    assert fb_kwargs["path"] == ("PAGE_ID", "photos")
     assert fb_kwargs["params"]["published"] is False
+    assert "source" in fb_kwargs["files"]
 
     fake_ig.create_media.assert_called_once_with(
         params={"image_url": "https://scontent.fb.example/image.jpg", "caption": "Hello"}
@@ -48,8 +60,7 @@ def test_publish_dry_run_skips_api(tmp_path: Path) -> None:
 
 
 def test_publish_raises_when_fb_upload_returns_no_url(tmp_path: Path) -> None:
-    fake_page = MagicMock()
-    fake_page.create_photo.return_value = {"id": "5555", "images": []}
+    fake_page = _fake_page({"id": "5555", "images": []})
     publisher = InstagramPublisher(page=fake_page, ig=MagicMock(), dry_run=False)
     with pytest.raises(RuntimeError, match="image url"):
         publisher.publish(_request(tmp_path))

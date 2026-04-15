@@ -88,18 +88,16 @@ def test_read_sponsors_returns_all(repo: Repository) -> None:
     assert "A" in result and "B" in result
 
 
-def test_read_style_examples_filtered_by_language(repo: Repository) -> None:
+def test_read_style_examples_returns_pt(repo: Repository) -> None:
     repo.replace_style_examples(
         [
             StyleExample(language=Language.PT, text="Texto em PT"),
-            StyleExample(language=Language.EN, text="Text in EN"),
         ]
     )
     tools = build_content_tools(repo=repo)
     read_style = next(t for t in tools if t.name == "read_style_examples")
     result = read_style.invoke({"language": "pt"})
-    assert "PT" in result
-    assert "EN" not in result
+    assert "Texto em PT" in result
 
 
 def test_render_stats_card_writes_file(repo: Repository, tmp_path: Path) -> None:

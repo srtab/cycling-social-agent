@@ -20,12 +20,10 @@ def _build_user_message(repo: Repository, since: dt.datetime) -> str:
         events_text = "\n".join(lines)
 
     pt_examples = "\n\n---\n\n".join(ex.text for ex in repo.list_style_examples(Language.PT))
-    en_examples = "\n\n---\n\n".join(ex.text for ex in repo.list_style_examples(Language.EN))
 
     return (
         f"# Recent approval events (since {since.isoformat()})\n\n{events_text}\n\n"
-        f"# Current PT style examples\n\n{pt_examples or '(none)'}\n\n"
-        f"# Current EN style examples\n\n{en_examples or '(none)'}\n"
+        f"# Current PT style examples\n\n{pt_examples or '(none)'}\n"
     )
 
 

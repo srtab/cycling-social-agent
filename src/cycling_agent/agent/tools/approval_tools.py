@@ -9,13 +9,28 @@ import asyncio
 from pathlib import Path
 
 from langchain_core.tools import BaseTool, tool
+from sqlalchemy.exc import IntegrityError
 
 from cycling_agent.approval.bot import ApprovalBot
 from cycling_agent.db.models import DraftStatus, Language, Platform
 from cycling_agent.db.repo import Repository
 
 
-def build_approval_tools(*, repo: Repository, bot: ApprovalBot) -> list[BaseTool]:
+def build_approval_tools(
+    *, repo: Repository, bot: ApprovalBot, main_loop: asyncio.AbstractEventLoop
+) -> list[BaseTool]:
+    """Build approval-related tools.
+
+    ``main_loop`` is the application's running event loop. The agent runner
+    invokes these tools from a worker thread (``asyncio.to_thread``), so the
+    tool must submit its async Telegram calls back to the main loop via
+    ``run_coroutine_threadsafe``. Using ``asyncio.run`` here would spin up a
+    throwaway loop in the worker thread and leave orphaned httpx connections
+    — bound to that closed loop — in the shared ``telegram.Bot`` connection
+    pool. Later, Telegram button callbacks running on the main loop crash
+    with ``RuntimeError: Event loop is closed`` when the pool tries to evict
+    those stale connections.
+    """
     @tool
     def send_for_approval(
         activity_id: int,
@@ -48,22 +63,35 @@ def build_approval_tools(*, repo: Repository, bot: ApprovalBot) -> list[BaseTool
             )
 
         media_list = [Path(p.strip()) for p in media_paths.split(",") if p.strip()]
-        draft_id = repo.create_draft(
-            activity_id=activity_id,
-            platform=platform_enum,
-            language=Language(language),
-            caption=caption,
-            hashtags=hashtags or None,
-            media_paths=",".join(str(p) for p in media_list) or None,
-        )
+        try:
+            draft_id = repo.create_draft(
+                activity_id=activity_id,
+                platform=platform_enum,
+                language=Language(language),
+                caption=caption,
+                hashtags=hashtags or None,
+                media_paths=",".join(str(p) for p in media_list) or None,
+            )
+        except IntegrityError:
+            # A draft for this (activity, platform, language) already exists.
+            # This happens when the orchestrator mis-checks existing drafts.
+            # Return a REJECTED string so the tick recovers instead of crashing.
+            return (
+                f"REJECTED: a draft for activity {activity_id} on {platform}/{language} "
+                f"already exists. Call list_drafts_for_activity({activity_id}) to see "
+                f"its status, then check_approval_status on its draft_id — do not "
+                f"re-draft unless its status is pending or drafted."
+            )
 
-        message_id = asyncio.run(
+        future = asyncio.run_coroutine_threadsafe(
             bot.send_draft_card(
                 draft_id=draft_id,
                 caption=f"#{draft_id} ({platform}/{language})\n\n{caption}\n{hashtags}".strip(),
                 media_paths=media_list,
-            )
+            ),
+            main_loop,
         )
+        message_id = future.result()
         repo.set_draft_status(draft_id, DraftStatus.AWAITING_APPROVAL, telegram_message_id=message_id)
         return f"Sent draft #{draft_id} for approval (telegram message {message_id})."
 
