@@ -22,11 +22,21 @@ def repo() -> Repository:
 
 def _race(id_: int) -> StravaActivity:
     return StravaActivity(
-        id=id_, name=f"Race {id_}", workout_type=11,
+        id=id_,
+        name=f"Race {id_}",
+        workout_type=11,
         started_at=dt.datetime(2026, 4, 1, 10, 0, tzinfo=dt.UTC),
-        distance_m=100000, moving_time_s=10000, elevation_gain_m=1500,
-        avg_speed_mps=10.0, avg_power_w=300, norm_power_w=305, avg_hr=160,
-        max_hr=185, kilojoules=3000, feeling_text=None, polyline="abc",
+        distance_m=100000,
+        moving_time_s=10000,
+        elevation_gain_m=1500,
+        avg_speed_mps=10.0,
+        avg_power_w=300,
+        norm_power_w=305,
+        avg_hr=160,
+        max_hr=185,
+        kilojoules=3000,
+        feeling_text=None,
+        polyline="abc",
     )
 
 

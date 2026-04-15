@@ -68,9 +68,7 @@ class Activity(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     workout_type: Mapped[int] = mapped_column(Integer, nullable=False)
     feeling_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[ActivityStatus] = mapped_column(
-        String(32), default=ActivityStatus.DETECTED, nullable=False
-    )
+    status: Mapped[ActivityStatus] = mapped_column(String(32), default=ActivityStatus.DETECTED, nullable=False)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now, nullable=False)
     processed_at: Mapped[dt.datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -79,9 +77,7 @@ class Activity(Base):
 
 class Draft(Base):
     __tablename__ = "drafts"
-    __table_args__ = (
-        UniqueConstraint("activity_id", "platform", "language", name="uq_draft_per_combo"),
-    )
+    __table_args__ = (UniqueConstraint("activity_id", "platform", "language", name="uq_draft_per_combo"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     activity_id: Mapped[int] = mapped_column(ForeignKey("activities.id"), nullable=False)
@@ -90,9 +86,7 @@ class Draft(Base):
     caption: Mapped[str] = mapped_column(Text, nullable=False)
     hashtags: Mapped[str | None] = mapped_column(Text, nullable=True)
     media_paths: Mapped[str | None] = mapped_column(Text, nullable=True)  # comma-separated
-    status: Mapped[DraftStatus] = mapped_column(
-        String(32), default=DraftStatus.PENDING, nullable=False
-    )
+    status: Mapped[DraftStatus] = mapped_column(String(32), default=DraftStatus.PENDING, nullable=False)
     telegram_message_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     feedback_hint: Mapped[str | None] = mapped_column(Text, nullable=True)
     regenerate_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

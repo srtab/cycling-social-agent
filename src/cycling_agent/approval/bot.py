@@ -84,26 +84,18 @@ class ApprovalBot:
         markup = self._build_keyboard(draft_id, include_reschedule=False)
         media = next((p for p in media_paths if p.exists()), None)
         if media is None:
-            sent = await self._bot.send_message(
-                chat_id=self._chat_id, text=caption, reply_markup=markup
-            )
+            sent = await self._bot.send_message(chat_id=self._chat_id, text=caption, reply_markup=markup)
         else:
             with media.open("rb") as fh:
-                sent = await self._bot.send_photo(
-                    chat_id=self._chat_id, photo=fh, caption=caption, reply_markup=markup
-                )
+                sent = await self._bot.send_photo(chat_id=self._chat_id, photo=fh, caption=caption, reply_markup=markup)
         return int(sent.message_id)
 
     # --- handlers -------------------------------------------------------------
 
-    async def _handle_start(
-        self, update: Any, context: ContextTypes.DEFAULT_TYPE
-    ) -> None:
+    async def _handle_start(self, update: Any, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("cycling-agent ready. I'll send you race posts to approve.")
 
-    async def handle_callback(
-        self, update: Any, context: ContextTypes.DEFAULT_TYPE
-    ) -> None:
+    async def handle_callback(self, update: Any, context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id = getattr(update.effective_chat, "id", None)
         if chat_id != self._chat_id:
             log.warning("approval.bot.foreign_chat", chat_id=chat_id)
@@ -121,7 +113,8 @@ class ApprovalBot:
         if action == CB_APPROVE_QUEUED:
             self._repo.set_approved(draft_id, post_now=False)
             self._repo.log_approval_event(
-                draft_id=draft_id, event="approved",
+                draft_id=draft_id,
+                event="approved",
                 payload=json.dumps({"post_now": False}),
             )
             await context.bot.send_message(
@@ -132,18 +125,21 @@ class ApprovalBot:
         elif action == CB_APPROVE_NOW:
             self._repo.set_approved(draft_id, post_now=True)
             self._repo.log_approval_event(
-                draft_id=draft_id, event="approved",
+                draft_id=draft_id,
+                event="approved",
                 payload=json.dumps({"post_now": True}),
             )
             await context.bot.send_message(
-                chat_id=self._chat_id, text=f"Draft #{draft_id} approved — posting now.",
+                chat_id=self._chat_id,
+                text=f"Draft #{draft_id} approved — posting now.",
             )
 
         elif action == CB_REJECT:
             self._repo.set_draft_status(draft_id, DraftStatus.REJECTED)
             self._repo.log_approval_event(draft_id=draft_id, event="rejected", payload="{}")
             await context.bot.send_message(
-                chat_id=self._chat_id, text=f"Draft #{draft_id} rejected.",
+                chat_id=self._chat_id,
+                text=f"Draft #{draft_id} rejected.",
             )
 
         elif action == CB_REGENERATE:
@@ -169,15 +165,10 @@ class ApprovalBot:
             context.user_data["awaiting_reschedule_for"] = draft_id
             await context.bot.send_message(
                 chat_id=self._chat_id,
-                text=(
-                    f"Send a new time for draft #{draft_id} "
-                    f"(e.g. '2026-04-02 21:00' or 'tomorrow 19:00')."
-                ),
+                text=(f"Send a new time for draft #{draft_id} (e.g. '2026-04-02 21:00' or 'tomorrow 19:00')."),
             )
 
-    async def handle_text(
-        self, update: Any, context: ContextTypes.DEFAULT_TYPE
-    ) -> None:
+    async def handle_text(self, update: Any, context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id = getattr(update.effective_chat, "id", None)
         if chat_id != self._chat_id:
             return
@@ -186,11 +177,10 @@ class ApprovalBot:
 
         edit_for = context.user_data.pop("awaiting_edit_for", None)
         if edit_for is not None:
-            self._repo.set_draft_status(
-                int(edit_for), DraftStatus.AWAITING_APPROVAL, caption=text
-            )
+            self._repo.set_draft_status(int(edit_for), DraftStatus.AWAITING_APPROVAL, caption=text)
             self._repo.log_approval_event(
-                draft_id=int(edit_for), event="edited",
+                draft_id=int(edit_for),
+                event="edited",
                 payload=json.dumps({"new_caption": text}),
             )
             await update.message.reply_text(f"Draft #{edit_for} updated. Tap Approve to publish.")
@@ -201,26 +191,24 @@ class ApprovalBot:
             hint = "" if text.lower() == "skip" else text
             self._repo.set_draft_status(int(hint_for), DraftStatus.REGENERATING, feedback_hint=hint)
             self._repo.log_approval_event(
-                draft_id=int(hint_for), event="regenerated",
+                draft_id=int(hint_for),
+                event="regenerated",
                 payload=json.dumps({"hint": hint}),
             )
-            await update.message.reply_text(
-                f"Hint recorded for draft #{hint_for}. Will regenerate on next cycle."
-            )
+            await update.message.reply_text(f"Hint recorded for draft #{hint_for}. Will regenerate on next cycle.")
             return
 
         resched_for = context.user_data.pop("awaiting_reschedule_for", None)
         if resched_for is not None:
             parsed = dateparser.parse(text, settings={"PREFER_DATES_FROM": "future"})
             if parsed is None:
-                await update.message.reply_text(
-                    f"Could not parse '{text}' as a date. Try '2026-04-02 21:00'."
-                )
+                await update.message.reply_text(f"Could not parse '{text}' as a date. Try '2026-04-02 21:00'.")
                 context.user_data["awaiting_reschedule_for"] = resched_for
                 return
             self._repo.reschedule_draft(int(resched_for), parsed)
             self._repo.log_approval_event(
-                draft_id=int(resched_for), event="rescheduled",
+                draft_id=int(resched_for),
+                event="rescheduled",
                 payload=json.dumps({"scheduled_for": parsed.isoformat()}),
             )
             await update.message.reply_text(
@@ -228,12 +216,8 @@ class ApprovalBot:
             )
             return
 
-    async def handle_photo(
-        self, update: Any, context: ContextTypes.DEFAULT_TYPE
-    ) -> None:
-        await update.message.reply_text(
-            "Photo received — attaching photos to drafts will be supported in a follow-up."
-        )
+    async def handle_photo(self, update: Any, context: ContextTypes.DEFAULT_TYPE) -> None:
+        await update.message.reply_text("Photo received — attaching photos to drafts will be supported in a follow-up.")
 
     # --- helpers --------------------------------------------------------------
 
@@ -243,9 +227,7 @@ class ApprovalBot:
             raise ValueError(f"bad callback data: {data!r}")
         return action, int(draft_id_str)
 
-    def _build_keyboard(
-        self, draft_id: int, *, include_reschedule: bool
-    ) -> InlineKeyboardMarkup:
+    def _build_keyboard(self, draft_id: int, *, include_reschedule: bool) -> InlineKeyboardMarkup:
         rows = [
             [
                 InlineKeyboardButton(

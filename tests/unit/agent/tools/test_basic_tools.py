@@ -26,11 +26,21 @@ def repo() -> Repository:
 
 def _activity(id_: int = 1) -> StravaActivity:
     return StravaActivity(
-        id=id_, name=f"Race {id_}", workout_type=11,
+        id=id_,
+        name=f"Race {id_}",
+        workout_type=11,
         started_at=dt.datetime(2026, 4, 1, 10, 0, tzinfo=dt.UTC),
-        distance_m=158420, moving_time_s=12640, elevation_gain_m=1834,
-        avg_speed_mps=12.5, avg_power_w=268, norm_power_w=305,
-        avg_hr=162, max_hr=188, kilojoules=3387, feeling_text=None, polyline="abc",
+        distance_m=158420,
+        moving_time_s=12640,
+        elevation_gain_m=1834,
+        avg_speed_mps=12.5,
+        avg_power_w=268,
+        norm_power_w=305,
+        avg_hr=162,
+        max_hr=188,
+        kilojoules=3387,
+        feeling_text=None,
+        polyline="abc",
     )
 
 
@@ -66,10 +76,12 @@ def test_get_feeling_returns_stored_text(repo: Repository) -> None:
 
 
 def test_read_sponsors_returns_all(repo: Repository) -> None:
-    repo.replace_sponsors([
-        Sponsor(name="A", handle_facebook="@a", handle_instagram="@a", hashtag="#a"),
-        Sponsor(name="B", handle_facebook="@b", handle_instagram="@b", hashtag="#b"),
-    ])
+    repo.replace_sponsors(
+        [
+            Sponsor(name="A", handle_facebook="@a", handle_instagram="@a", hashtag="#a"),
+            Sponsor(name="B", handle_facebook="@b", handle_instagram="@b", hashtag="#b"),
+        ]
+    )
     tools = build_content_tools(repo=repo)
     read_sponsors = next(t for t in tools if t.name == "read_sponsors")
     result = read_sponsors.invoke({})
@@ -77,10 +89,12 @@ def test_read_sponsors_returns_all(repo: Repository) -> None:
 
 
 def test_read_style_examples_filtered_by_language(repo: Repository) -> None:
-    repo.replace_style_examples([
-        StyleExample(language=Language.PT, text="Texto em PT"),
-        StyleExample(language=Language.EN, text="Text in EN"),
-    ])
+    repo.replace_style_examples(
+        [
+            StyleExample(language=Language.PT, text="Texto em PT"),
+            StyleExample(language=Language.EN, text="Text in EN"),
+        ]
+    )
     tools = build_content_tools(repo=repo)
     read_style = next(t for t in tools if t.name == "read_style_examples")
     result = read_style.invoke({"language": "pt"})

@@ -26,8 +26,11 @@ def repo() -> Repository:
 
 def _approved_draft(repo: Repository, *, platform: Platform = Platform.FACEBOOK) -> int:
     did = repo.create_draft(
-        activity_id=1, platform=platform, language=Language.PT,
-        caption="x", media_paths="/tmp/a.png",
+        activity_id=1,
+        platform=platform,
+        language=Language.PT,
+        caption="x",
+        media_paths="/tmp/a.png",
     )
     repo.set_approved(did, post_now=False)
     return did
@@ -37,8 +40,10 @@ def test_schedule_publish_sets_scheduled_for_today_when_in_future(repo: Reposito
     did = _approved_draft(repo)
     publishers = {Platform.FACEBOOK: MagicMock(), Platform.INSTAGRAM: MagicMock()}
     tools = build_publish_tools(
-        repo=repo, publishers=publishers,
-        publish_time_local="19:00", publish_timezone="Europe/Lisbon",
+        repo=repo,
+        publishers=publishers,
+        publish_time_local="19:00",
+        publish_timezone="Europe/Lisbon",
     )
     schedule = next(t for t in tools if t.name == "schedule_publish")
     with freeze_time("2026-04-01 10:00:00", tz_offset=0):
@@ -54,8 +59,10 @@ def test_schedule_publish_rolls_to_next_day_when_window_passed(repo: Repository)
     did = _approved_draft(repo)
     publishers = {Platform.FACEBOOK: MagicMock(), Platform.INSTAGRAM: MagicMock()}
     tools = build_publish_tools(
-        repo=repo, publishers=publishers,
-        publish_time_local="19:00", publish_timezone="Europe/Lisbon",
+        repo=repo,
+        publishers=publishers,
+        publish_time_local="19:00",
+        publish_timezone="Europe/Lisbon",
     )
     schedule = next(t for t in tools if t.name == "schedule_publish")
     with freeze_time("2026-04-01 22:00:00", tz_offset=0):
@@ -70,8 +77,11 @@ def test_publish_due_drafts_publishes_scheduled_past(repo: Repository, tmp_path:
     img = tmp_path / "card.png"
     img.write_bytes(b"PNG")
     did = repo.create_draft(
-        activity_id=1, platform=Platform.FACEBOOK, language=Language.PT,
-        caption="x", media_paths=str(img),
+        activity_id=1,
+        platform=Platform.FACEBOOK,
+        language=Language.PT,
+        caption="x",
+        media_paths=str(img),
     )
     repo.set_approved(did, post_now=False)
     repo.schedule_draft(did, dt.datetime(2026, 4, 1, 18, 0))
@@ -80,8 +90,10 @@ def test_publish_due_drafts_publishes_scheduled_past(repo: Repository, tmp_path:
     fb.publish.return_value = "fb-post-1"
     publishers = {Platform.FACEBOOK: fb, Platform.INSTAGRAM: MagicMock()}
     tools = build_publish_tools(
-        repo=repo, publishers=publishers,
-        publish_time_local="19:00", publish_timezone="Europe/Lisbon",
+        repo=repo,
+        publishers=publishers,
+        publish_time_local="19:00",
+        publish_timezone="Europe/Lisbon",
     )
     publish_due = next(t for t in tools if t.name == "publish_due_drafts")
     with freeze_time("2026-04-01 19:30:00"):
@@ -97,8 +109,11 @@ def test_publish_due_drafts_publishes_post_now(repo: Repository, tmp_path: Path)
     img = tmp_path / "card.png"
     img.write_bytes(b"PNG")
     did = repo.create_draft(
-        activity_id=1, platform=Platform.INSTAGRAM, language=Language.PT,
-        caption="x", media_paths=str(img),
+        activity_id=1,
+        platform=Platform.INSTAGRAM,
+        language=Language.PT,
+        caption="x",
+        media_paths=str(img),
     )
     repo.set_approved(did, post_now=True)
 
@@ -106,8 +121,10 @@ def test_publish_due_drafts_publishes_post_now(repo: Repository, tmp_path: Path)
     ig.publish.return_value = "ig-post-1"
     publishers = {Platform.FACEBOOK: MagicMock(), Platform.INSTAGRAM: ig}
     tools = build_publish_tools(
-        repo=repo, publishers=publishers,
-        publish_time_local="19:00", publish_timezone="Europe/Lisbon",
+        repo=repo,
+        publishers=publishers,
+        publish_time_local="19:00",
+        publish_timezone="Europe/Lisbon",
     )
     publish_due = next(t for t in tools if t.name == "publish_due_drafts")
     publish_due.invoke({})
@@ -116,12 +133,17 @@ def test_publish_due_drafts_publishes_post_now(repo: Repository, tmp_path: Path)
 
 def test_publish_to_facebook_refuses_unless_approved(repo: Repository) -> None:
     did = repo.create_draft(
-        activity_id=1, platform=Platform.FACEBOOK, language=Language.PT, caption="x",
+        activity_id=1,
+        platform=Platform.FACEBOOK,
+        language=Language.PT,
+        caption="x",
     )
     publishers = {Platform.FACEBOOK: MagicMock(), Platform.INSTAGRAM: MagicMock()}
     tools = build_publish_tools(
-        repo=repo, publishers=publishers,
-        publish_time_local="19:00", publish_timezone="Europe/Lisbon",
+        repo=repo,
+        publishers=publishers,
+        publish_time_local="19:00",
+        publish_timezone="Europe/Lisbon",
     )
     publish_fb = next(t for t in tools if t.name == "publish_to_facebook")
     result = publish_fb.invoke({"draft_id": did})

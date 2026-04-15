@@ -64,9 +64,7 @@ def build_approval_tools(*, repo: Repository, bot: ApprovalBot) -> list[BaseTool
                 media_paths=media_list,
             )
         )
-        repo.set_draft_status(
-            draft_id, DraftStatus.AWAITING_APPROVAL, telegram_message_id=message_id
-        )
+        repo.set_draft_status(draft_id, DraftStatus.AWAITING_APPROVAL, telegram_message_id=message_id)
         return f"Sent draft #{draft_id} for approval (telegram message {message_id})."
 
     @tool
@@ -82,9 +80,7 @@ def build_approval_tools(*, repo: Repository, bot: ApprovalBot) -> list[BaseTool
         if d.status == DraftStatus.AWAITING_APPROVAL:
             return f"Draft {draft_id} status: pending"
         if d.status == DraftStatus.APPROVED:
-            return (
-                f"Draft {draft_id} status: approved post_now={'true' if d.post_now else 'false'}"
-            )
+            return f"Draft {draft_id} status: approved post_now={'true' if d.post_now else 'false'}"
         if d.status == DraftStatus.EDITING:
             return f"Draft {draft_id} status: editing (rider is composing replacement)"
         if d.status == DraftStatus.REGENERATING:

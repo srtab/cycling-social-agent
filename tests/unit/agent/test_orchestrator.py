@@ -42,13 +42,21 @@ def test_collect_tools_returns_expected_names(deps: OrchestratorDeps) -> None:
     tools = _collect_tools(deps)
     names = {t.name for t in tools}
     assert {
-        "list_new_races", "get_activity_detail", "get_feeling",
-        "read_sponsors", "read_style_examples",
-        "render_stats_card", "render_route_map",
-        "send_for_approval", "check_approval_status",
-        "schedule_publish", "publish_due_drafts",
-        "publish_to_facebook", "publish_to_instagram",
-        "mark_processed", "log_feedback",
+        "list_new_races",
+        "get_activity_detail",
+        "get_feeling",
+        "read_sponsors",
+        "read_style_examples",
+        "render_stats_card",
+        "render_route_map",
+        "send_for_approval",
+        "check_approval_status",
+        "schedule_publish",
+        "publish_due_drafts",
+        "publish_to_facebook",
+        "publish_to_instagram",
+        "mark_processed",
+        "log_feedback",
     }.issubset(names)
 
 

@@ -41,8 +41,12 @@ def test_set_feeling_text(repo: Repository) -> None:
 def test_create_draft_returns_id(repo: Repository) -> None:
     repo.upsert_activity(id=1, started_at=dt.datetime(2026, 4, 1), name="Crit", workout_type=11)
     draft_id = repo.create_draft(
-        activity_id=1, platform=Platform.FACEBOOK, language=Language.PT,
-        caption="hello", hashtags="#x", media_paths="/tmp/a.png",
+        activity_id=1,
+        platform=Platform.FACEBOOK,
+        language=Language.PT,
+        caption="hello",
+        hashtags="#x",
+        media_paths="/tmp/a.png",
     )
     assert draft_id > 0
     d = repo.get_draft(draft_id)

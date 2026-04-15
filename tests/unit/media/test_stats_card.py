@@ -13,11 +13,21 @@ from cycling_agent.strava.client import StravaActivity
 
 def _activity() -> StravaActivity:
     return StravaActivity(
-        id=1, name="Volta ao Algarve - Etapa 2", workout_type=11,
+        id=1,
+        name="Volta ao Algarve - Etapa 2",
+        workout_type=11,
         started_at=dt.datetime(2026, 2, 19, 13, 30, tzinfo=dt.UTC),
-        distance_m=158420, moving_time_s=12640, elevation_gain_m=1834,
-        avg_speed_mps=12.5, avg_power_w=268, norm_power_w=305,
-        avg_hr=162, max_hr=188, kilojoules=3387, feeling_text=None, polyline="abc",
+        distance_m=158420,
+        moving_time_s=12640,
+        elevation_gain_m=1834,
+        avg_speed_mps=12.5,
+        avg_power_w=268,
+        norm_power_w=305,
+        avg_hr=162,
+        max_hr=188,
+        kilojoules=3387,
+        feeling_text=None,
+        polyline="abc",
     )
 
 

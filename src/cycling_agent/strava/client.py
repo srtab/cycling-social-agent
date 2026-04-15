@@ -97,11 +97,7 @@ class StravaClient:
         """Convert raw Strava payload (dict or attr-object) into our typed activity."""
         started = _attr(payload, "start_date_local")
         # ISO-8601 may end in Z; stravalib already returns datetime objects.
-        started_dt = (
-            dt.datetime.fromisoformat(started.replace("Z", "+00:00"))
-            if isinstance(started, str)
-            else started
-        )
+        started_dt = dt.datetime.fromisoformat(started.replace("Z", "+00:00")) if isinstance(started, str) else started
         if started_dt.tzinfo is None:
             started_dt = started_dt.replace(tzinfo=dt.UTC)
 

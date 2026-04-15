@@ -12,9 +12,7 @@ from cycling_agent.strava.client import StravaClient
 from cycling_agent.strava.poller import StravaPoller
 
 
-def build_strava_tools(
-    *, repo: Repository, client: StravaClient, poller: StravaPoller
-) -> list[BaseTool]:
+def build_strava_tools(*, repo: Repository, client: StravaClient, poller: StravaPoller) -> list[BaseTool]:
     """Build the Strava-related tools as bound LangChain tools."""
 
     @tool

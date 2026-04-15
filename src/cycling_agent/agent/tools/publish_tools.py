@@ -68,10 +68,7 @@ def build_publish_tools(
         if d.status != DraftStatus.APPROVED:
             return f"REJECTED: draft {draft_id} status is {d.status}, not approved"
         if d.post_now:
-            return (
-                f"REJECTED: draft {draft_id} is post_now; "
-                f"do not schedule, call publish_due_drafts instead"
-            )
+            return f"REJECTED: draft {draft_id} is post_now; do not schedule, call publish_due_drafts instead"
         scheduled_for = _next_publish_window(dt.datetime.now(dt.UTC))
         repo.schedule_draft(draft_id, scheduled_for)
         return f"Draft {draft_id} scheduled for {scheduled_for.isoformat()}Z"

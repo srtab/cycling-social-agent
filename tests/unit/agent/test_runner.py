@@ -99,8 +99,10 @@ async def test_consecutive_failures_trigger_bot_alert(repo: Repository) -> None:
     fake_bot._bot.send_message = AsyncMock()
 
     runner = AgentRunner(
-        orchestrator=fake_agent, repo=repo,
-        approval_bot=fake_bot, failure_alert_threshold=3,
+        orchestrator=fake_agent,
+        repo=repo,
+        approval_bot=fake_bot,
+        failure_alert_threshold=3,
     )
     for _ in range(3):
         await runner.run_once()
@@ -124,8 +126,10 @@ async def test_success_resets_failure_counter(repo: Repository) -> None:
     fake_bot._bot.send_message = AsyncMock()
 
     runner = AgentRunner(
-        orchestrator=fake_agent, repo=repo,
-        approval_bot=fake_bot, failure_alert_threshold=3,
+        orchestrator=fake_agent,
+        repo=repo,
+        approval_bot=fake_bot,
+        failure_alert_threshold=3,
     )
     for _ in range(4):
         await runner.run_once()

@@ -51,7 +51,10 @@ def test_run_reflect_with_no_events_writes_empty_proposal(tmp_path: Path) -> Non
     fake_llm.invoke.return_value.content = "(no events to reflect on)"
     out_dir = tmp_path / "reflect-proposals"
     path = run_reflect(
-        repo=repo, llm=fake_llm, output_dir=out_dir,
-        now=dt.datetime(2026, 4, 15, 12, 0), lookback_days=30,
+        repo=repo,
+        llm=fake_llm,
+        output_dir=out_dir,
+        now=dt.datetime(2026, 4, 15, 12, 0),
+        lookback_days=30,
     )
     assert path.exists()

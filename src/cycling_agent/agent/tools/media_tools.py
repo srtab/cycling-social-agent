@@ -12,9 +12,7 @@ from cycling_agent.media.stats_card import StatsCardRenderer
 from cycling_agent.strava.client import StravaClient
 
 
-def build_media_tools(
-    *, repo: Repository, strava: StravaClient, media_dir: Path
-) -> list[BaseTool]:
+def build_media_tools(*, repo: Repository, strava: StravaClient, media_dir: Path) -> list[BaseTool]:
     stats_card = StatsCardRenderer()
     route_map = RouteMapRenderer()
 

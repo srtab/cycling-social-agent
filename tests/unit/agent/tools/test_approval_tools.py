@@ -36,9 +36,7 @@ def fake_bot() -> MagicMock:
     return bot
 
 
-def test_send_for_approval_rejects_when_sponsor_missing(
-    repo: Repository, fake_bot: MagicMock, tmp_path: Path
-) -> None:
+def test_send_for_approval_rejects_when_sponsor_missing(repo: Repository, fake_bot: MagicMock, tmp_path: Path) -> None:
     img = tmp_path / "card.png"
     img.write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 50)
 
@@ -59,9 +57,7 @@ def test_send_for_approval_rejects_when_sponsor_missing(
     fake_bot.send_draft_card.assert_not_called()
 
 
-def test_send_for_approval_creates_draft_and_sends(
-    repo: Repository, fake_bot: MagicMock, tmp_path: Path
-) -> None:
+def test_send_for_approval_creates_draft_and_sends(repo: Repository, fake_bot: MagicMock, tmp_path: Path) -> None:
     img = tmp_path / "card.png"
     img.write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 50)
 
@@ -88,7 +84,10 @@ def test_send_for_approval_creates_draft_and_sends(
 
 def test_check_approval_status_returns_pending(repo: Repository, fake_bot: MagicMock) -> None:
     did = repo.create_draft(
-        activity_id=1, platform=Platform.FACEBOOK, language=Language.PT, caption="x",
+        activity_id=1,
+        platform=Platform.FACEBOOK,
+        language=Language.PT,
+        caption="x",
     )
     repo.set_draft_status(did, DraftStatus.AWAITING_APPROVAL, telegram_message_id=42)
     tools = build_approval_tools(repo=repo, bot=fake_bot)
@@ -97,11 +96,12 @@ def test_check_approval_status_returns_pending(repo: Repository, fake_bot: Magic
     assert "pending" in result.lower()
 
 
-def test_check_approval_status_returns_approved_with_post_now(
-    repo: Repository, fake_bot: MagicMock
-) -> None:
+def test_check_approval_status_returns_approved_with_post_now(repo: Repository, fake_bot: MagicMock) -> None:
     did = repo.create_draft(
-        activity_id=1, platform=Platform.FACEBOOK, language=Language.PT, caption="x",
+        activity_id=1,
+        platform=Platform.FACEBOOK,
+        language=Language.PT,
+        caption="x",
     )
     repo.set_approved(did, post_now=True)
     tools = build_approval_tools(repo=repo, bot=fake_bot)
@@ -111,11 +111,12 @@ def test_check_approval_status_returns_approved_with_post_now(
     assert "post_now=true" in result.lower()
 
 
-def test_check_approval_status_returns_regenerate_hint(
-    repo: Repository, fake_bot: MagicMock
-) -> None:
+def test_check_approval_status_returns_regenerate_hint(repo: Repository, fake_bot: MagicMock) -> None:
     did = repo.create_draft(
-        activity_id=1, platform=Platform.FACEBOOK, language=Language.PT, caption="x",
+        activity_id=1,
+        platform=Platform.FACEBOOK,
+        language=Language.PT,
+        caption="x",
     )
     repo.set_draft_status(did, DraftStatus.REGENERATING, feedback_hint="more grateful")
     tools = build_approval_tools(repo=repo, bot=fake_bot)

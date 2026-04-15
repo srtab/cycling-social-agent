@@ -36,9 +36,7 @@ class Repository:
 
     # --- activities ----------------------------------------------------------
 
-    def upsert_activity(
-        self, *, id: int, started_at: dt.datetime, name: str, workout_type: int
-    ) -> None:
+    def upsert_activity(self, *, id: int, started_at: dt.datetime, name: str, workout_type: int) -> None:
         with self._session_factory() as s:
             existing = s.get(Activity, id)
             if existing is None:
@@ -61,9 +59,7 @@ class Repository:
             a.feeling_text = text
             s.commit()
 
-    def list_activities_in_states(
-        self, statuses: Sequence[ActivityStatus]
-    ) -> list[Activity]:
+    def list_activities_in_states(self, statuses: Sequence[ActivityStatus]) -> list[Activity]:
         with self._session_factory() as s:
             stmt = select(Activity).where(Activity.status.in_(list(statuses)))
             return list(s.execute(stmt).scalars().all())
@@ -198,26 +194,20 @@ class Repository:
             )
             return list(s.execute(stmt).scalars().all())
 
-    def list_drafts_in_states(
-        self, statuses: Sequence[DraftStatus]
-    ) -> list[Draft]:
+    def list_drafts_in_states(self, statuses: Sequence[DraftStatus]) -> list[Draft]:
         with self._session_factory() as s:
             stmt = select(Draft).where(Draft.status.in_(list(statuses)))
             return list(s.execute(stmt).scalars().all())
 
     # --- posts ---------------------------------------------------------------
 
-    def record_post(
-        self, *, draft_id: int, platform: Platform, external_post_id: str
-    ) -> None:
+    def record_post(self, *, draft_id: int, platform: Platform, external_post_id: str) -> None:
         with self._session_factory() as s:
             d = s.get(Draft, draft_id)
             if d is None:
                 raise ValueError(f"draft {draft_id} not found")
             existing = s.execute(
-                select(Post).where(
-                    Post.draft_id == draft_id, Post.platform == platform
-                )
+                select(Post).where(Post.draft_id == draft_id, Post.platform == platform)
             ).scalar_one_or_none()
             if existing is not None:
                 return  # idempotent
@@ -247,9 +237,7 @@ class Repository:
 
     def list_style_examples(self, language: Language) -> list[StyleExample]:
         with self._session_factory() as s:
-            stmt = select(StyleExample).where(
-                StyleExample.language == language, StyleExample.enabled.is_(True)
-            )
+            stmt = select(StyleExample).where(StyleExample.language == language, StyleExample.enabled.is_(True))
             return list(s.execute(stmt).scalars().all())
 
     # --- approval events -----------------------------------------------------
@@ -261,18 +249,10 @@ class Repository:
 
     def list_approval_events_for_draft(self, draft_id: int) -> list[ApprovalEvent]:
         with self._session_factory() as s:
-            stmt = (
-                select(ApprovalEvent)
-                .where(ApprovalEvent.draft_id == draft_id)
-                .order_by(ApprovalEvent.at)
-            )
+            stmt = select(ApprovalEvent).where(ApprovalEvent.draft_id == draft_id).order_by(ApprovalEvent.at)
             return list(s.execute(stmt).scalars().all())
 
     def list_recent_approval_events(self, *, since: dt.datetime) -> list[ApprovalEvent]:
         with self._session_factory() as s:
-            stmt = (
-                select(ApprovalEvent)
-                .where(ApprovalEvent.at >= since)
-                .order_by(ApprovalEvent.at)
-            )
+            stmt = select(ApprovalEvent).where(ApprovalEvent.at >= since).order_by(ApprovalEvent.at)
             return list(s.execute(stmt).scalars().all())

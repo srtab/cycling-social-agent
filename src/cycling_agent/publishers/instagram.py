@@ -50,16 +50,12 @@ class InstagramPublisher:
             )
         images = fb_response.get("images", [])
         if not images or "source" not in images[0]:
-            raise RuntimeError(
-                "Facebook upload did not return an image url; cannot create IG container"
-            )
+            raise RuntimeError("Facebook upload did not return an image url; cannot create IG container")
         image_url = images[0]["source"]
         log.info("publisher.ig.image_uploaded", url=image_url)
 
         # Step 2: create the IG media container
-        container = self._ig.create_media(
-            params={"image_url": image_url, "caption": request.caption}
-        )
+        container = self._ig.create_media(params={"image_url": image_url, "caption": request.caption})
         creation_id = container["id"]
 
         # Step 3: publish the container

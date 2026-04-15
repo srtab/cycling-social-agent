@@ -34,8 +34,12 @@ def repo() -> Repository:
 def seeded_draft(repo: Repository) -> int:
     repo.upsert_activity(id=1, started_at=dt.datetime(2026, 4, 1), name="Crit", workout_type=11)
     return repo.create_draft(
-        activity_id=1, platform=Platform.FACEBOOK, language=Language.PT,
-        caption="hello", hashtags=None, media_paths=None,
+        activity_id=1,
+        platform=Platform.FACEBOOK,
+        language=Language.PT,
+        caption="hello",
+        hashtags=None,
+        media_paths=None,
     )
 
 
@@ -110,9 +114,7 @@ async def test_handle_regenerate_prompts_for_hint(repo: Repository, seeded_draft
     assert ctx.user_data.get("awaiting_hint_for") == seeded_draft
 
 
-async def test_handle_text_message_after_regenerate_records_hint(
-    repo: Repository, seeded_draft: int
-) -> None:
+async def test_handle_text_message_after_regenerate_records_hint(repo: Repository, seeded_draft: int) -> None:
     bot = ApprovalBot(repo=repo, chat_id=11111)
     repo.set_draft_status(seeded_draft, DraftStatus.REGENERATING)
 
@@ -130,9 +132,7 @@ async def test_handle_text_message_after_regenerate_records_hint(
     assert "awaiting_hint_for" not in ctx.user_data
 
 
-async def test_handle_reschedule_prompts_for_time(
-    repo: Repository, seeded_draft: int
-) -> None:
+async def test_handle_reschedule_prompts_for_time(repo: Repository, seeded_draft: int) -> None:
     repo.set_approved(seeded_draft, post_now=False)
     repo.schedule_draft(seeded_draft, dt.datetime(2026, 4, 1, 19, 0))
     bot = ApprovalBot(repo=repo, chat_id=11111)
@@ -143,9 +143,7 @@ async def test_handle_reschedule_prompts_for_time(
     ctx.bot.send_message.assert_awaited()
 
 
-async def test_handle_text_after_reschedule_updates_scheduled_for(
-    repo: Repository, seeded_draft: int
-) -> None:
+async def test_handle_text_after_reschedule_updates_scheduled_for(repo: Repository, seeded_draft: int) -> None:
     repo.set_approved(seeded_draft, post_now=False)
     repo.schedule_draft(seeded_draft, dt.datetime(2026, 4, 1, 19, 0))
     bot = ApprovalBot(repo=repo, chat_id=11111)
@@ -161,9 +159,7 @@ async def test_handle_text_after_reschedule_updates_scheduled_for(
     assert d.scheduled_for == dt.datetime(2026, 4, 2, 21, 0)
 
 
-async def test_handle_callback_ignores_other_chats(
-    repo: Repository, seeded_draft: int
-) -> None:
+async def test_handle_callback_ignores_other_chats(repo: Repository, seeded_draft: int) -> None:
     bot = ApprovalBot(repo=repo, chat_id=99999)
     update = SimpleNamespace(
         callback_query=_query(callback_data(CB_APPROVE_QUEUED, draft_id=seeded_draft)),
@@ -175,9 +171,7 @@ async def test_handle_callback_ignores_other_chats(
     assert d.status != DraftStatus.APPROVED
 
 
-async def test_send_draft_card_calls_telegram_with_buttons(
-    repo: Repository, seeded_draft: int, tmp_path: Path
-) -> None:
+async def test_send_draft_card_calls_telegram_with_buttons(repo: Repository, seeded_draft: int, tmp_path: Path) -> None:
     img = tmp_path / "card.png"
     img.write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 50)
 
@@ -185,9 +179,7 @@ async def test_send_draft_card_calls_telegram_with_buttons(
     fake_bot.send_photo = AsyncMock(return_value=SimpleNamespace(message_id=4242))
     bot = ApprovalBot(repo=repo, chat_id=11111, telegram_bot=fake_bot)
 
-    msg_id = await bot.send_draft_card(
-        draft_id=seeded_draft, caption="hello", media_paths=[img]
-    )
+    msg_id = await bot.send_draft_card(draft_id=seeded_draft, caption="hello", media_paths=[img])
     assert msg_id == 4242
     fake_bot.send_photo.assert_awaited_once()
     kwargs = fake_bot.send_photo.await_args.kwargs

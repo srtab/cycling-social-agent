@@ -16,10 +16,7 @@ def _build_user_message(repo: Repository, since: dt.datetime) -> str:
     if not events:
         events_text = "(none)"
     else:
-        lines = [
-            f"- {e.at.isoformat()} draft={e.draft_id} event={e.event} payload={e.payload or '{}'}"
-            for e in events
-        ]
+        lines = [f"- {e.at.isoformat()} draft={e.draft_id} event={e.event} payload={e.payload or '{}'}" for e in events]
         events_text = "\n".join(lines)
 
     pt_examples = "\n\n---\n\n".join(ex.text for ex in repo.list_style_examples(Language.PT))

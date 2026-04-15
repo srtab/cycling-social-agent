@@ -49,11 +49,7 @@ def test_load_sponsors_replaces_previous(tmp_path: Path, repo: Repository) -> No
 
 def test_load_style_examples_splits_paragraphs(tmp_path: Path, repo: Repository) -> None:
     md = tmp_path / "style_pt.md"
-    md.write_text(
-        "Primeiro post sobre uma vitória.\n\n"
-        "---\n\n"
-        "Segundo post, dia duro mas grato.\n"
-    )
+    md.write_text("Primeiro post sobre uma vitória.\n\n---\n\nSegundo post, dia duro mas grato.\n")
     load_style_examples(md, Language.PT, repo)
     examples = repo.list_style_examples(Language.PT)
     assert len(examples) == 2

@@ -27,12 +27,21 @@ from cycling_agent.strava.client import StravaActivity
 
 def _activity() -> StravaActivity:
     return StravaActivity(
-        id=14738291734, name="Volta ao Algarve", workout_type=11,
+        id=14738291734,
+        name="Volta ao Algarve",
+        workout_type=11,
         started_at=dt.datetime(2026, 2, 19, 13, 30, tzinfo=dt.UTC),
-        distance_m=158420, moving_time_s=12640, elevation_gain_m=1834,
-        avg_speed_mps=12.5, avg_power_w=268, norm_power_w=305,
-        avg_hr=162, max_hr=188, kilojoules=3387,
-        feeling_text="Etapa difícil, top 15.", polyline=None,
+        distance_m=158420,
+        moving_time_s=12640,
+        elevation_gain_m=1834,
+        avg_speed_mps=12.5,
+        avg_power_w=268,
+        norm_power_w=305,
+        avg_hr=162,
+        max_hr=188,
+        kilojoules=3387,
+        feeling_text="Etapa difícil, top 15.",
+        polyline=None,
     )
 
 
@@ -41,17 +50,21 @@ def test_full_workflow_dry_run_publishes_and_marks_processed(tmp_path: Path) -> 
     engine = build_engine(":memory:")
     init_schema(engine)
     repo = Repository(build_session_factory(engine))
-    repo.replace_sponsors([
-        Sponsor(name="BrandX", handle_facebook="@brandx", handle_instagram="@brandx", hashtag="#brandx"),
-    ])
+    repo.replace_sponsors(
+        [
+            Sponsor(name="BrandX", handle_facebook="@brandx", handle_instagram="@brandx", hashtag="#brandx"),
+        ]
+    )
 
     fake_strava = MagicMock()
     fake_strava.get_activity_detail.return_value = _activity()
     fake_poller = MagicMock()
     fake_poller.poll.return_value = [14738291734]
     repo.upsert_activity(
-        id=14738291734, started_at=dt.datetime(2026, 2, 19, 13, 30),
-        name="Volta", workout_type=11,
+        id=14738291734,
+        started_at=dt.datetime(2026, 2, 19, 13, 30),
+        name="Volta",
+        workout_type=11,
     )
 
     fake_bot = MagicMock()
@@ -68,8 +81,10 @@ def test_full_workflow_dry_run_publishes_and_marks_processed(tmp_path: Path) -> 
     media_tools = build_media_tools(repo=repo, strava=fake_strava, media_dir=media_dir)
     approval_tools = build_approval_tools(repo=repo, bot=fake_bot)
     publish_tools = build_publish_tools(
-        repo=repo, publishers=publishers,
-        publish_time_local="19:00", publish_timezone="Europe/Lisbon",
+        repo=repo,
+        publishers=publishers,
+        publish_time_local="19:00",
+        publish_timezone="Europe/Lisbon",
     )
     state_tools = build_state_tools(repo=repo)
 
@@ -93,10 +108,16 @@ def test_full_workflow_dry_run_publishes_and_marks_processed(tmp_path: Path) -> 
     assert "BrandX" in sponsor_text
 
     caption = "Etapa difícil mas valeu. Obrigado @brandx pelo apoio. #brandx"
-    result = by_name(approval_tools, "send_for_approval").invoke({
-        "activity_id": 14738291734, "platform": "facebook", "language": "pt",
-        "caption": caption, "hashtags": "", "media_paths": stats_path,
-    })
+    result = by_name(approval_tools, "send_for_approval").invoke(
+        {
+            "activity_id": 14738291734,
+            "platform": "facebook",
+            "language": "pt",
+            "caption": caption,
+            "hashtags": "",
+            "media_paths": stats_path,
+        }
+    )
     assert "Sent" in result
 
     # --- step 5: simulate rider tapping "Approve & post now" --------------
