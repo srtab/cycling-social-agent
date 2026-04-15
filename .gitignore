@@ -1,0 +1,34 @@
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.python-version
+*.egg-info/
+build/
+dist/
+
+# uv
+uv.lock
+
+# env
+.env
+.env.local
+
+# data
+data/cycling.db
+data/cycling.db-journal
+data/reflect-proposals/
+data/media/
+
+# editors
+.vscode/
+.idea/
+*.swp
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.ty_cache/
