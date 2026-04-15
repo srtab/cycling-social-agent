@@ -7,9 +7,9 @@
 
 ## 1. Summary
 
-A personal automation agent that watches a pro cyclist's Strava account for race activities and produces approval-gated social media posts on Facebook and Instagram. Posts mix technical race data with the rider's first-person voice, always credit sponsors, are reviewed via a Telegram bot or a local web UI, and are published at a configurable time of day for engagement.
+A personal automation agent that watches a pro cyclist's Strava account for race activities and produces approval-gated social media posts on Facebook and Instagram. Posts mix technical race data with the rider's first-person voice, always credit sponsors, are reviewed via a Telegram bot, and are published at a configurable time of day for engagement.
 
-The agent is implemented as a **DeepAgents** orchestrator (LangChain ecosystem) running locally on the rider's laptop. State is persisted in SQLite so that sleep/wake cycles and multi-hour approval delays do not lose work. A small FastAPI + TailwindCSS web UI runs in the same process for management, history browsing, and an alternative approval surface.
+The agent is implemented as a **DeepAgents** orchestrator (LangChain ecosystem) running locally on the rider's laptop. State is persisted in SQLite so that sleep/wake cycles and multi-hour approval delays do not lose work.
 
 ## 2. Goals
 
@@ -19,8 +19,7 @@ The agent is implemented as a **DeepAgents** orchestrator (LangChain ecosystem) 
 - Capture the rider's voice via few-shot examples plus a per-race "feeling" note pulled from the Strava activity's private description.
 - Require explicit human approval (with edit / regenerate / reject options) before any post is published.
 - Publish approved posts at a configurable time of day, with an "approve & post now" override.
-- Provide a local web UI (TailwindCSS) for managing sponsors, style examples, and browsing post history — with the Telegram bot remaining the primary on-the-go approval channel.
-- Support an opt-in `reflect` workflow that mines approval feedback (edits, regenerate hints, rejects) and proposes style-guide updates for the rider to apply.
+- Support an opt-in `reflect` CLI workflow that mines approval feedback (edits, regenerate hints, rejects) and proposes style-guide updates for the rider to apply.
 - Be robust to laptop sleep, intermittent connectivity, and approvals that take hours.
 
 ## 3. Non-goals (v1)
@@ -30,7 +29,7 @@ The agent is implemented as a **DeepAgents** orchestrator (LangChain ecosystem) 
 - Sponsor tiers, rotation, or contractual logic — flat sponsor list, all mentioned every time.
 - Retroactive posts for races prior to install date.
 - Multi-rider / team support.
-- Authentication / multi-user access for the web UI — bound to `127.0.0.1` only.
+- Web UI of any kind — Telegram bot + CLI only for v1. Web UI deferred to §15.
 - Autonomous self-modification of the style guide — `reflect` proposes diffs, the rider applies them.
 - Hosted deployment (VPS, cloud). Laptop-only for v1, with a Raspberry Pi migration path noted in §15.
 
@@ -78,7 +77,7 @@ cycling-social-agent/
 ├── docs/
 │   └── superpowers/specs/            # design docs
 ├── src/cycling_agent/
-│   ├── main.py                       # entry: scheduler + telegram bot + web ui + agent runner
+│   ├── main.py                       # entry: scheduler + telegram bot + agent runner
 │   ├── config.py                     # env + secrets
 │   ├── cli.py                        # serve, init-db, seed-sponsors, test-publish, dry-run, reflect
 │   ├── agent/
@@ -107,16 +106,6 @@ cycling-social-agent/
 │   │   └── instagram.py              # Graph API: IG Business container + publish
 │   ├── approval/
 │   │   └── bot.py                    # python-telegram-bot; long-polling
-│   ├── web/
-│   │   ├── app.py                    # FastAPI app, mounted on the same process
-│   │   ├── routes/
-│   │   │   ├── dashboard.py          # pending approvals + recent posts + agent status
-│   │   │   ├── activities.py         # list + detail (drafts, media, approve/edit/reject)
-│   │   │   ├── sponsors.py           # edit sponsors.yaml via form
-│   │   │   ├── style.py              # edit style examples markdown
-│   │   │   └── settings.py           # read-only config + buttons (poll-now, dry-run, reflect)
-│   │   ├── templates/                # Jinja2; TailwindCSS via CDN; HTMX for inline edits
-│   │   └── static/                   # minimal css overrides, app icon
 │   ├── media/
 │   │   ├── stats_card.py             # Pillow render of key stats
 │   │   └── route_map.py              # decode polyline → map tile composite
@@ -158,17 +147,15 @@ pending → drafted → awaiting_approval ─► approved ─► scheduled ─�
                                      └─► regenerating → drafted
 ```
 
-`scheduled` carries a `scheduled_for` timestamp set by `schedule_publish` based on `PUBLISH_TIME_LOCAL` and `PUBLISH_TIMEZONE` (see §13). When the rider taps **Approve & post now** in Telegram or the web UI, the state machine skips `scheduled` and goes straight to `published` on the next cycle. An activity is `processed` only when every draft is in a terminal state (`published` or `rejected`).
+`scheduled` carries a `scheduled_for` timestamp set by `schedule_publish` based on `PUBLISH_TIME_LOCAL` and `PUBLISH_TIMEZONE` (see §13). When the rider taps **Approve & post now** in Telegram, the state machine skips `scheduled` and goes straight to `published` on the next cycle. An activity is `processed` only when every draft is in a terminal state (`published` or `rejected`).
 
-### 6.3 Approval UX (Telegram + web UI)
+### 6.3 Approval UX (Telegram)
 
-The Telegram bot is the primary on-the-go surface; the web UI is an alternative that exposes the same actions. Both write to the same `drafts` rows, so a draft approved on one surface is reflected on the other on next refresh.
-
-For each draft the Telegram bot sends a message containing:
+For each draft the bot sends a message containing:
 
 - Rendered media (route map composite + stats card; optional rider photo if attached later)
 - Draft caption + hashtags
-- Inline buttons: ✅ Approve (queued) | ⚡ Approve & post now | ✏️ Edit | 🔄 Regenerate | ❌ Reject
+- Inline buttons: ✅ Approve (queued) | ⚡ Approve & post now | ✏️ Edit | 🔄 Regenerate | ❌ Reject | 📅 Reschedule
 
 Flows:
 
@@ -177,13 +164,12 @@ Flows:
 - **Edit:** bot prompts for replacement caption; rider replies; bot re-renders preview; rider can approve or edit again.
 - **Regenerate:** bot prompts for an optional hint (e.g., "more grateful, less hype"). Hint is logged to `approval_events` and passed to the drafter sub-agent on retry.
 - **Reject:** bot writes `rejected` to DB. No publish.
+- **Reschedule:** for drafts already in `scheduled` state, bot prompts for a new time (free-text parsed by `dateparser`); updates `scheduled_for`.
 - **Photo attach:** before approval, rider can reply with one or more photos. Bot stores them and they replace the auto-generated stats card image (or augment it; rider chooses via a follow-up button).
-
-The web UI offers the same five actions on each draft card via HTMX-driven inline controls, plus the ability to edit the `scheduled_for` timestamp on a draft already in `scheduled` state.
 
 ### 6.4 Reflect (opt-in feedback mining)
 
-`uv run cycling-agent reflect` (or a button in the web UI's settings page) spawns the **reflector sub-agent** with read-only access to `approval_events` and the current style example files. The reflector returns a markdown diff suggesting:
+`uv run cycling-agent reflect` spawns the **reflector sub-agent** with read-only access to `approval_events` and the current style example files. The reflector returns a markdown diff suggesting:
 
 - New style examples to add (drawn from edits the rider made to drafts)
 - Existing examples to retire (drawn from regenerate hints that contradict them)
@@ -196,7 +182,7 @@ The diff is written to `data/reflect-proposals/YYYY-MM-DD.md`. The rider reviews
 | Table | Key fields |
 |---|---|
 | `activities` | `id` (Strava activity id), `started_at`, `name`, `workout_type`, `feeling_text`, `status`, `created_at`, `processed_at` |
-| `drafts` | `id`, `activity_id`, `platform` (`facebook`/`instagram`), `language` (`pt`/`en`), `caption`, `hashtags`, `media_paths`, `status`, `telegram_message_id`, `feedback_hint`, `regenerate_count`, `scheduled_for` (nullable timestamp), `post_now` (bool, default false), `approval_source` (`telegram`/`web`/null), `created_at`, `updated_at` |
+| `drafts` | `id`, `activity_id`, `platform` (`facebook`/`instagram`), `language` (`pt`/`en`), `caption`, `hashtags`, `media_paths`, `status`, `telegram_message_id`, `feedback_hint`, `regenerate_count`, `scheduled_for` (nullable timestamp), `post_now` (bool, default false), `created_at`, `updated_at` |
 | `posts` | `id`, `draft_id`, `platform`, `external_post_id`, `published_at` |
 | `sponsors` | `id`, `name`, `handle_facebook`, `handle_instagram`, `hashtag` (loaded from `sponsors.yaml` on startup) |
 | `style_examples` | `id`, `language`, `text`, `enabled` (loaded from markdown files on startup) |
@@ -260,39 +246,6 @@ All tools are async. All state-modifying tools are idempotent w.r.t. their prima
 - **Idle-cycle short-circuit:** if `list_new_races` returns empty the orchestrator should exit in 1–2 LLM calls. Verified in tests.
 - **Estimated cost:** sub-cent per idle cycle; ~$0.30 per race (4 drafts × drafter loop). Well below any meaningful budget for personal use.
 
-## 10a. Web UI scope (v1)
-
-A small server-rendered UI that runs in the same process as the agent and bot. Not a SPA. No build pipeline.
-
-**Stack**
-
-- FastAPI for routes and lifecycle (mounts cleanly into the same asyncio event loop as the bot and scheduler).
-- Jinja2 for templates.
-- TailwindCSS via CDN (`cdn.tailwindcss.com`) — keeps the project zero-config; switch to a built CSS bundle later if/when bundle size matters.
-- HTMX for inline approve/edit/reject without page reloads.
-- No JavaScript build step. No client framework.
-
-**Surface area**
-
-- `GET /` — Dashboard: cards for drafts in `awaiting_approval`, drafts in `scheduled` (with countdown), recent `published` posts, and an "agent status" tile (last cycle time, last cycle outcome, next scheduled cycle).
-- `GET /activities` — List of all detected race activities with state and processed timestamp.
-- `GET /activities/{id}` — Detail page: race summary, "feeling" text, all four drafts with media previews, per-draft action buttons (approve / approve & post now / edit / regenerate / reject), and a "scheduled for" editor for any draft in `scheduled` state.
-- `GET /sponsors`, `POST /sponsors` — Form-based editor for `sponsors.yaml`. Validates structure on submit.
-- `GET /style/{lang}`, `POST /style/{lang}` — Markdown editor for the language's style examples file.
-- `GET /settings` — Read-only view of effective config (env vars, redacted secrets) plus action buttons: **Poll now**, **Run reflect**, **Toggle dry-run**.
-- `GET /healthz` — JSON liveness for self-check.
-
-**Security & access**
-
-- Bound to `127.0.0.1:WEB_UI_PORT` only — never exposed externally.
-- No authentication. Any user on the laptop can use it; that's the rider, by definition.
-- All write actions are CSRF-protected via a per-process token in templates (defence in depth even on localhost).
-
-**Behaviour**
-
-- Every action in the UI writes to the same DB rows the Telegram bot writes to. Source-of-truth is shared; the agent loop reads DB state regardless of which surface produced it.
-- The dashboard auto-refreshes pending-approval and scheduled cards every 15 seconds via HTMX polling. Cheap and robust.
-
 ## 11. Error handling
 
 | Failure mode | Behavior |
@@ -315,7 +268,6 @@ A small server-rendered UI that runs in the same process as the agent and bot. N
 - **Tool invariant tests:** assert each invariant-enforcing tool actually rejects bad input (missing sponsor, wrong status, etc.).
 - **Dry-run mode:** `--dry-run` flag on `serve` short-circuits publishers to log instead of post; lets the rider exercise the full loop end-to-end against a real Telegram bot without risking real social posts.
 - **Smoke test target:** seed the DB with a fixture race activity, run one cycle, verify (a) drafts created, (b) Telegram messages sent, (c) on simulated approval, draft moves to `scheduled` with the correct `scheduled_for`, (d) on simulated time-passage, `publish_due_drafts` fires the dry-run publishers with correctly-formed payloads.
-- **Web UI tests:** FastAPI TestClient covers happy paths for each route; CSRF rejection asserted on a POST without token; HTMX endpoints assert correct partial fragments.
 - **Reflect tests:** golden `approval_events` fixture → expected proposal diff structure (presence of sections, no autonomous file writes).
 
 ## 13. Configuration
@@ -349,9 +301,6 @@ LOG_LEVEL=INFO
 
 PUBLISH_TIME_LOCAL=19:00
 PUBLISH_TIMEZONE=Europe/Lisbon
-
-WEB_UI_HOST=127.0.0.1
-WEB_UI_PORT=8765
 ```
 
 A first-run CLI command (`cycling-agent setup`) walks the rider through obtaining each token interactively and writes the file.
@@ -364,7 +313,7 @@ A first-run CLI command (`cycling-agent setup`) walks the rider through obtainin
 
 ## 15. Deferred to post-v1
 
+- **Local web UI** (FastAPI + Jinja2 + TailwindCSS via CDN + HTMX). Planned routes: dashboard of pending/scheduled drafts, activity history, sponsor and style-guide editors, settings page with reflect/poll-now buttons. Bound to `127.0.0.1` only, no auth, CSRF-protected writes. Both the bot and the UI would write to the same `drafts` rows. Excluded from v1 to keep the initial scope tight; the data model and tools already accommodate a second approval surface (no schema migration needed when added).
 - **Always-on Raspberry Pi (or similar) deployment.** Same code, same DB schema; only changes are `DB_PATH` location, a `systemd` unit, and a `.env` file move. Worth doing once v1 has been used for a real race weekend and the rider trusts the loop.
 - **Stories, Reels, Twitter/X, LinkedIn, Threads, Bluesky.** Each is a new publisher implementing the existing `Publisher` protocol; the agent loop and approval flow do not change.
 - **Sponsor tiers, rotation, contractual logic.** Replaces the flat `read_sponsors` tool with a context-aware variant; downstream invariants still apply.
-- **Authenticated multi-user web UI** (e.g., for a coach or social-media manager).
