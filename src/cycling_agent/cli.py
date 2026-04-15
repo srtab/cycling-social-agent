@@ -10,6 +10,7 @@ Additional subcommands (serve, reflect, dry-run helpers) land in later tasks.
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import click
@@ -67,6 +68,18 @@ def seed_style_cmd(lang: str, path: Path) -> None:
     repo = _build_repo()
     load_style_examples(path, Language(lang), repo)
     click.echo(f"loaded {len(repo.list_style_examples(Language(lang)))} examples for {lang}")
+
+
+@cli.command("serve")
+@click.option("--dry-run/--live", default=None, help="Override DRY_RUN env var")
+def serve_cmd(dry_run: bool | None) -> None:
+    """Run the agent + Telegram bot in the foreground."""
+    from cycling_agent.main import serve_async
+
+    settings = load_settings()
+    if dry_run is not None:
+        settings.dry_run = dry_run
+    asyncio.run(serve_async(settings))
 
 
 def main() -> None:
