@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import secrets
+from typing import Any
 
 import structlog
 
@@ -15,14 +16,16 @@ class FacebookPublisher:
     """Posts photos with a caption to a Facebook Page.
 
     The ``page`` argument is a ``facebook_business.adobjects.page.Page`` instance
-    or a mock with the same surface (``create_photo``).
+    (or a mock with the same surface — ``get_api()`` and ``["id"]``). We go
+    through the SDK's low-level ``FacebookAdsApi.call`` because ``Page.create_photo``
+    does not accept a ``files=`` kwarg for multipart upload.
 
     Note: ``ig_business_id`` is unused here but accepted for symmetry with how
     the Instagram publisher composes itself; allows both publishers to be built
     from the same factory.
     """
 
-    def __init__(self, *, page: object, ig_business_id: str | None, dry_run: bool) -> None:
+    def __init__(self, *, page: Any, ig_business_id: str | None, dry_run: bool) -> None:
         self._page = page
         self._dry_run = dry_run
         self._ig_business_id = ig_business_id  # not used for FB
@@ -40,10 +43,13 @@ class FacebookPublisher:
             raise FileNotFoundError(media)
 
         with media.open("rb") as fh:
-            response = self._page.create_photo(
+            http_response = self._page.get_api().call(
+                method="POST",
+                path=(self._page["id"], "photos"),
                 params={"caption": request.caption, "published": True},
                 files={"source": fh},
             )
+        response = http_response.json()
         post_id = str(response["id"])
         log.info("publisher.fb.published", id=post_id)
         return post_id

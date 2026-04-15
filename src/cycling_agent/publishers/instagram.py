@@ -8,6 +8,7 @@ then publish the container.
 from __future__ import annotations
 
 import secrets
+from typing import Any
 
 import structlog
 
@@ -25,7 +26,7 @@ class InstagramPublisher:
         dry_run: when True, returns a fake id and skips all API calls.
     """
 
-    def __init__(self, *, page: object, ig: object, dry_run: bool) -> None:
+    def __init__(self, *, page: Any, ig: Any, dry_run: bool) -> None:
         self._page = page
         self._ig = ig
         self._dry_run = dry_run
@@ -42,12 +43,18 @@ class InstagramPublisher:
         if not media.exists():
             raise FileNotFoundError(media)
 
-        # Step 1: private upload to FB album to obtain a CDN URL
+        # Step 1: private upload to FB album to obtain a CDN URL. We go
+        # through the SDK's low-level ``FacebookAdsApi.call`` because
+        # ``Page.create_photo`` does not accept a ``files=`` kwarg for
+        # multipart upload.
         with media.open("rb") as fh:
-            fb_response = self._page.create_photo(
-                params={"published": False},
+            http_response = self._page.get_api().call(
+                method="POST",
+                path=(self._page["id"], "photos"),
+                params={"published": False, "fields": "images"},
                 files={"source": fh},
             )
+        fb_response = http_response.json()
         images = fb_response.get("images", [])
         if not images or "source" not in images[0]:
             raise RuntimeError("Facebook upload did not return an image url; cannot create IG container")
